@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LessonLens</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Nunito+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "surface-dim": "#cbdbf5",
+                        "tertiary-container": "#007cb1",
+                        "on-secondary-container": "#fffbff",
+                        "secondary-fixed-dim": "#ddb7ff",
+                        "on-primary-fixed": "#07006c",
+                        "on-secondary-fixed": "#2c0051",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-tint": "#494bd6",
+                        "inverse-surface": "#213145",
+                        "surface-bright": "#f8f9ff",
+                        "inverse-primary": "#c0c1ff",
+                        "on-surface-variant": "#464554",
+                        "primary-fixed": "#e1e0ff",
+                        "secondary": "#8127cf",
+                        "on-primary-container": "#fffbff",
+                        "surface-container-low": "#eff4ff",
+                        "primary": "#4648d4",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "surface": "#f8f9ff",
+                        "outline": "#767586",
+                        "on-background": "#0b1c30",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "on-surface": "#0b1c30",
+                        "background": "#f8f9ff",
+                        "inverse-on-surface": "#eaf1ff",
+                        "primary-container": "#6063ee",
+                        "on-secondary-fixed-variant": "#6900b3",
+                        "on-tertiary": "#ffffff",
+                        "surface-container": "#e5eeff",
+                        "on-tertiary-container": "#fcfcff",
+                        "surface-variant": "#d3e4fe",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#00628d",
+                        "secondary-container": "#9c48ea",
+                        "outline-variant": "#c7c4d7",
+                        "surface-container-high": "#dce9ff",
+                        "tertiary-fixed": "#c9e6ff",
+                        "on-tertiary-fixed": "#001e2f",
+                        "secondary-fixed": "#f0dbff",
+                        "primary-fixed-dim": "#c0c1ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "20px",
+                        "container-padding": "24px",
+                        "stack-lg": "48px",
+                        "stack-sm": "12px",
+                        "stack-md": "24px",
+                        "base": "8px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Nunito Sans"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Nunito Sans"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Nunito Sans"],
+                        "headline-lg": ["Nunito Sans"],
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "title-lg": ["Nunito Sans"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+                    },
+                    "boxShadow": {
+                        "level-1": "0 4px 20px rgba(70, 72, 212, 0.05)",
+                        "level-2": "0 12px 32px rgba(70, 72, 212, 0.12)"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .inner-stroke {
+            box-shadow: inset 0 0 0 1px rgba(70, 72, 212, 0.1);
+        }
+        @keyframes float1 { 0% { transform: translateY(0px) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(1deg); } 100% { transform: translateY(0px) rotate(-2deg); } }
+        @keyframes float2 { 0% { transform: translateY(0px) rotate(2deg) scale(0.95); } 50% { transform: translateY(-15px) rotate(-1deg) scale(1); } 100% { transform: translateY(0px) rotate(2deg) scale(0.95); } }
+        @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.3); opacity: 0; } }
+        .animate-float-1 { animation: float1 6s ease-in-out infinite; }
+        .animate-float-2 { animation: float2 7s ease-in-out infinite; }
+        .bg-grid-pattern {
+            background-image: radial-gradient(rgba(70, 72, 212, 0.1) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        
+        .state-transition {
+            transition: all 0.5s ease-in-out;
+        }
+    </style>
+<!-- Load React and ReactDOM -->
+<script crossorigin="" src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin="" src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<!-- Load Babel for JSX -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-surface text-on-surface font-body-md text-body-md antialiased overflow-x-hidden min-h-screen flex flex-col">
+<!-- TopAppBar (Shared Component) -->
+<nav class="docked full-width top-0 sticky z-50 bg-surface/80 dark:bg-surface-container-lowest/80 backdrop-blur-md border-b border-primary/10 shadow-sm transition-all duration-300" id="top-nav">
+<div class="flex justify-between items-center w-full px-gutter max-w-[1200px] mx-auto h-16">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">psychology</span>
+<span class="text-title-lg font-title-lg font-extrabold text-primary dark:text-primary-fixed">LessonLens</span>
+<span class="hidden sm:inline-block px-3 py-1 bg-secondary-container text-on-secondary-container text-label-sm font-label-sm rounded-full ml-2">School Education Track</span>
+</div>
+<!-- Navigation Links -->
+<div class="hidden md:flex gap-8 items-center text-label-md font-label-md">
+<a class="text-primary dark:text-primary-fixed font-bold border-b-2 border-primary pb-1 scale-95 transition-transform" href="#">Dashboard</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors" href="#">Observations</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors" href="#">History</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors" href="#">Resources</a>
+</div>
+<div class="flex items-center gap-4 text-label-md font-label-md">
+<button class="hidden md:block text-primary hover:bg-primary/5 px-4 py-2 rounded-xl transition-colors">Sign In</button>
+<button class="bg-gradient-to-r from-primary to-secondary text-on-primary px-5 py-2.5 rounded-xl shadow-level-1 hover:shadow-level-2 transition-all font-semibold">Start Observation</button>
+</div>
+</div>
+</nav>
+<!-- Main Canvas -->
+<main class="flex-grow">
+<!-- Hero Section -->
+<section class="relative w-full pt-stack-lg pb-24 overflow-hidden">
+<div class="absolute inset-0 bg-grid-pattern opacity-50 z-0"></div>
+<!-- Decorative Blobs -->
+<div class="absolute top-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl z-0"></div>
+<div class="absolute bottom-10 left-10 w-72 h-72 bg-secondary/10 rounded-full blur-3xl z-0"></div>
+<div class="max-w-[1200px] mx-auto px-gutter relative z-10">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-stack-lg items-center">
+<!-- Hero Content -->
+<div class="flex flex-col gap-6">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 bg-surface-container-high rounded-full w-fit">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="text-label-sm font-label-sm text-primary">Your personal teaching coach</span>
+</div>
+<h1 class="text-display-lg font-display-lg text-on-surface leading-tight">
+                            Every teacher <br class="hidden lg:block"/>deserves <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">feedback.</span>
+</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant max-w-lg">
+                            Paste a short classroom transcript and get a practical, encouraging coaching card in seconds. No grading, just growth.
+                        </p>
+<div class="flex flex-col sm:flex-row gap-4 mt-4">
+<button class="bg-gradient-to-r from-primary to-secondary text-on-primary px-6 py-3 rounded-xl text-label-md font-label-md shadow-level-1 hover:shadow-level-2 transition-all flex items-center justify-center gap-2" onclick="document.getElementById('demo-section').scrollIntoView({behavior: 'smooth'})">
+                                Try it now
+                                <span class="material-symbols-outlined text-lg">arrow_downward</span>
+</button>
+<button class="bg-transparent border-2 border-outline-variant text-on-surface-variant px-6 py-3 rounded-xl text-label-md font-label-md hover:border-primary hover:text-primary transition-all">
+                                Watch Video
+                            </button>
+</div>
+</div>
+<!-- Floating Glass Cards (Visual) -->
+<div class="relative h-[400px] hidden md:block">
+<!-- Card 1 -->
+<div class="absolute top-10 right-20 w-64 glass-panel rounded-2xl p-4 shadow-level-2 animate-float-1 z-20">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">groups</span>
+</div>
+<span class="text-label-md font-label-md text-on-surface">Student Participation</span>
+</div>
+<div class="h-2 w-full bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[60%] rounded-full"></div>
+</div>
+<p class="text-label-sm font-label-sm text-on-surface-variant mt-2 text-right">Medium • 60%</p>
+</div>
+<!-- Card 2 -->
+<div class="absolute bottom-20 left-10 w-72 bg-surface-container-lowest inner-stroke rounded-2xl p-5 shadow-level-2 animate-float-2 z-10 border-l-4 border-l-tertiary">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-tertiary">quiz</span>
+<div>
+<h3 class="text-label-md font-label-md text-on-surface">Question Quality</h3>
+<p class="text-body-md font-body-md text-on-surface-variant mt-1">Mostly Recall-based.</p>
+</div>
+</div>
+</div>
+<!-- Card 3 (Actionable) -->
+<div class="absolute top-1/2 right-0 transform -translate-y-1/2 w-72 bg-gradient-to-br from-surface-container-lowest to-surface-container-low inner-stroke rounded-2xl p-5 shadow-level-2 animate-float-1" style="animation-delay: 1s; z-index: 30;">
+<div class="flex items-center justify-between mb-2">
+<span class="text-label-sm font-label-sm text-secondary font-bold uppercase tracking-wider">Try Tomorrow</span>
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">lightbulb</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface font-medium">Ask one "Why" question after a student answers correctly.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- React Mount Point for Demo Section -->
+<div id="react-demo-root"></div>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="w-full py-stack-md px-gutter flex flex-col items-center gap-4 mt-auto bg-surface-container-high dark:bg-surface-container-highest">
+<div class="text-label-md font-label-md font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">psychology</span>
+            LessonLens
+        </div>
+<div class="flex gap-6 text-label-sm font-label-sm flex-wrap justify-center">
+<a class="text-on-surface-variant hover:text-secondary transition-colors" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors" href="#">Terms of Service</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors" href="#">Help Center</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors" href="#">Contact Support</a>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant text-center mt-2">Built for Education Hackathon 2024 • LessonLens</p>
+</footer>
+<!-- React Application Code -->
+<script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const sampleText = "Teacher: Good morning class. Today we're looking at states of matter. Who can tell me what happens when you heat water on a stove?\nStudent (Sarah): It gets hot.\nTeacher: Yes, it gets hot. What else?\nStudent (Tom): It makes bubbles and steam.\nTeacher: Correct. That steam is gas. The liquid turns into gas. Now open your books to page 42.";
+
+        const DemoApp = () => {
+            const [state, setState] = useState('empty'); // 'empty', 'filled', 'loading', 'success', 'error'
+            const [transcript, setTranscript] = useState('');
+            const [loadingMessage, setLoadingMessage] = useState('Listening to transcript...');
+            
+            const loadingMessages = [
+                "Listening to transcript...", 
+                "Analyzing question types...", 
+                "Identifying strengths...", 
+                "Preparing coaching card..."
+            ];
+
+            const handleLoadSample = () => {
+                setTranscript('');
+                setState('filled');
+                let i = 0;
+                const textarea = document.getElementById('transcript-input');
+                if (textarea) {
+                     const typing = setInterval(() => {
+                        if (i < sampleText.length) {
+                            setTranscript(prev => prev + sampleText.charAt(i));
+                            i++;
+                        } else {
+                            clearInterval(typing);
+                        }
+                    }, 10);
+                } else {
+                    setTranscript(sampleText);
+                }
+            };
+
+            const handleClear = () => {
+                setTranscript('');
+                setState('empty');
+            };
+
+            const handleAnalyze = () => {
+                if (transcript.length < 20) {
+                    setState('error');
+                    return;
+                }
+                
+                setState('loading');
+                
+                let messageIndex = 0;
+                const messageInterval = setInterval(() => {
+                    messageIndex = (messageIndex + 1) % loadingMessages.length;
+                    setLoadingMessage(loadingMessages[messageIndex]);
+                }, 800);
+
+                setTimeout(() => {
+                    clearInterval(messageInterval);
+                    setState('success');
+                }, 3500);
+            };
+
+            return (
+                <section className="py-stack-lg bg-surface-container-low/50 border-y border-outline-variant/20 relative" id="demo-section">
+                    <div className="max-w-[800px] mx-auto px-gutter relative z-10">
+                        <div className="text-center mb-stack-md">
+                            <h2 className="text-headline-md font-headline-md text-on-surface mb-2">Analyze a classroom moment</h2>
+                            <p className="text-body-md font-body-md text-on-surface-variant">Paste your transcript below to see LessonLens in action.</p>
+                        </div>
+
+                        {/* Input State */}
+                        {(state === 'empty' || state === 'filled' || state === 'error') && (
+                            <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-level-1 inner-stroke transition-all duration-500 state-transition">
+                                {state === 'error' && (
+                                    <div className="mb-4 p-3 bg-error-container text-on-error-container rounded-xl flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm">error</span>
+                                        <p className="text-label-md font-label-md">Please provide a longer transcript (at least 20 characters) for a meaningful analysis.</p>
+                                    </div>
+                                )}
+                                <textarea 
+                                    id="transcript-input"
+                                    className={`w-full bg-surface-bright border rounded-2xl p-4 text-body-md font-body-md text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all resize-none mb-6 placeholder:text-outline ${state === 'error' ? 'border-error/50 focus:border-error' : 'border-outline-variant/50 focus:border-primary'}`}
+                                    placeholder="E.g., Teacher: Today we are talking about the water cycle. Can anyone tell me what happens to puddles when the sun comes out?
+Student: They go away.
+Teacher: Right. That's called evaporation. Next..." 
+                                    rows="6"
+                                    value={transcript}
+                                    onChange={(e) => {
+                                        setTranscript(e.target.value);
+                                        if(state === 'error' && e.target.value.length >= 20) setState('empty');
+                                    }}
+                                ></textarea>
+                                
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                                    <button 
+                                        className="text-on-surface-variant hover:text-error text-label-md font-label-md transition-colors w-full sm:w-auto text-left" 
+                                        onClick={handleClear}
+                                    >
+                                        Clear
+                                    </button>
+                                    <div className="flex gap-3 w-full sm:w-auto">
+                                        <button 
+                                            className="w-full sm:w-auto bg-surface-container hover:bg-surface-container-high text-on-surface border border-outline-variant/30 px-5 py-2.5 rounded-xl text-label-md font-label-md transition-all" 
+                                            onClick={handleLoadSample}
+                                        >
+                                            Load Sample
+                                        </button>
+                                        <button 
+                                            className="w-full sm:w-auto bg-gradient-to-r from-primary to-secondary text-on-primary px-6 py-2.5 rounded-xl text-label-md font-label-md shadow-level-1 hover:shadow-level-2 transition-all flex items-center justify-center gap-2" 
+                                            onClick={handleAnalyze}
+                                        >
+                                            <span className="material-symbols-outlined text-sm">magic_button</span>
+                                            Analyze My Class
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Loading State */}
+                        {state === 'loading' && (
+                            <div className="flex flex-col items-center justify-center py-12 transition-all duration-500 state-transition">
+                                <div className="relative w-16 h-16 mb-6">
+                                    <div className="absolute inset-0 border-4 border-surface-container-highest rounded-full"></div>
+                                    <div className="absolute inset-0 border-4 border-primary rounded-full border-t-transparent animate-spin"></div>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-primary animate-pulse">hearing</span>
+                                    </div>
+                                </div>
+                                <h3 className="text-title-lg font-title-lg text-on-surface font-medium animate-pulse">{loadingMessage}</h3>
+                            </div>
+                        )}
+
+                        {/* Success State */}
+                        {state === 'success' && (
+                            <div className="flex flex-col gap-6 transition-all duration-700 state-transition">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-title-lg font-title-lg text-on-surface flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-secondary">summarize</span>
+                                        Your Classroom Snapshot
+                                    </h3>
+                                    <button 
+                                        className="text-primary text-label-sm font-label-sm hover:underline flex items-center gap-1" 
+                                        onClick={handleClear}
+                                    >
+                                        <span className="material-symbols-outlined text-xs">refresh</span> Start Over
+                                    </button>
+                                </div>
+
+                                {/* Try This Tomorrow (Prominent) */}
+                                <div className="bg-gradient-to-r from-surface-tint/10 to-secondary/10 rounded-2xl p-6 shadow-level-2 inner-stroke border border-primary/30 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2 group-hover:scale-150 transition-transform duration-700"></div>
+                                    <div className="relative z-10 flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary text-on-primary flex items-center justify-center shrink-0 shadow-lg border border-white/20">
+                                            <span className="material-symbols-outlined text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>rocket_launch</span>
+                                        </div>
+                                        <div className="flex-grow text-center sm:text-left">
+                                            <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                                                <span className="text-label-sm font-label-sm text-primary font-extrabold uppercase tracking-widest bg-primary/10 px-3 py-1 rounded-full">Try This Tomorrow</span>
+                                                <span className="px-2 py-0.5 bg-surface-container-lowest rounded text-[10px] border border-outline-variant/30 text-on-surface-variant font-medium">Small change, big impact</span>
+                                            </div>
+                                            <h4 className="text-headline-md font-headline-md text-on-surface mb-2">Add a "Why" after a "What"</h4>
+                                            <p className="text-body-lg font-body-lg text-on-surface-variant">When a student answers correctly, follow up with: <strong className="text-on-surface bg-primary/5 px-1 rounded">"How do you think that happens?"</strong> to shift from simple recall to active reasoning.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Bento Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Metric 1 */}
+                                    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm inner-stroke border-l-4 border-l-tertiary flex flex-col gap-2">
+                                        <div className="flex justify-between items-start">
+                                            <span className="text-label-md font-label-md text-outline">Student Participation</span>
+                                            <span className="material-symbols-outlined text-tertiary bg-tertiary/10 p-1.5 rounded-lg text-sm">groups</span>
+                                        </div>
+                                        <div className="text-title-lg font-title-lg text-on-surface">Medium</div>
+                                        <div className="h-1.5 w-full bg-surface-container-low rounded-full overflow-hidden mt-1">
+                                            <div className="h-full bg-tertiary w-[60%] rounded-full"></div>
+                                        </div>
+                                        <p className="text-label-sm font-label-sm text-on-surface-variant mt-1">Teacher spoke ~75% of the time.</p>
+                                    </div>
+                                    
+                                    {/* Metric 2 */}
+                                    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm inner-stroke border-l-4 border-l-secondary flex flex-col gap-2">
+                                        <div className="flex justify-between items-start">
+                                            <span className="text-label-md font-label-md text-outline">Question Quality</span>
+                                            <span className="material-symbols-outlined text-secondary bg-secondary/10 p-1.5 rounded-lg text-sm">live_help</span>
+                                        </div>
+                                        <div className="text-title-lg font-title-lg text-on-surface">Recall-based</div>
+                                        <div className="h-1.5 w-full bg-surface-container-low rounded-full overflow-hidden mt-1 flex gap-1">
+                                            <div className="h-full bg-secondary w-full rounded-full"></div>
+                                            <div className="h-full bg-secondary/30 w-full rounded-full"></div>
+                                            <div className="h-full bg-secondary/30 w-full rounded-full"></div>
+                                        </div>
+                                        <p className="text-label-sm font-label-sm text-on-surface-variant mt-1">Checked facts vs deep understanding.</p>
+                                    </div>
+
+                                    {/* Metric 3 */}
+                                    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm inner-stroke border-l-4 border-l-primary flex flex-col gap-2">
+                                        <div className="flex justify-between items-start">
+                                            <span className="text-label-md font-label-md text-outline">Language & Pacing</span>
+                                            <span className="material-symbols-outlined text-primary bg-primary/10 p-1.5 rounded-lg text-sm">record_voice_over</span>
+                                        </div>
+                                        <div className="text-title-lg font-title-lg text-on-surface">Clear</div>
+                                        <div className="h-1.5 w-full bg-surface-container-low rounded-full overflow-hidden mt-1 flex gap-1">
+                                            <div className="h-full bg-primary w-full rounded-full"></div>
+                                            <div className="h-full bg-primary w-full rounded-full"></div>
+                                            <div className="h-full bg-primary/30 w-full rounded-full"></div>
+                                        </div>
+                                        <p className="text-label-sm font-label-sm text-on-surface-variant mt-1">Good use of age-appropriate terms.</p>
+                                    </div>
+                                </div>
+
+                                {/* Strength Card & Encouragement */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="bg-surface-bright rounded-2xl p-5 border border-primary/20 md:col-span-2 flex items-start gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center shrink-0 shadow-sm border border-primary/10">
+                                            <span className="material-symbols-outlined text-lg" style={{fontVariationSettings: "'FILL' 1"}}>favorite</span>
+                                        </div>
+                                        <div>
+                                            <span className="inline-block px-2 py-1 bg-surface-container text-on-surface-variant text-[10px] uppercase font-bold tracking-wider rounded-md mb-2 border border-outline-variant/30">One thing you did well</span>
+                                            <h4 className="text-label-md font-label-md text-on-surface font-bold">Clear and Direct Affirmation</h4>
+                                            <p className="text-body-md font-body-md text-on-surface-variant mt-1">You immediately confirmed correct answers ("Yes, it gets hot. What else?") which builds student confidence and keeps the momentum going.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-gradient-to-br from-tertiary-container/30 to-surface-container rounded-2xl p-5 border border-tertiary/20 flex flex-col items-center justify-center text-center gap-2">
+                                        <span className="material-symbols-outlined text-4xl text-tertiary drop-shadow-sm" style={{fontVariationSettings: "'FILL' 1"}}>verified</span>
+                                        <h4 className="text-label-md font-label-md text-on-surface font-bold">Keep Growing</h4>
+                                        <p className="text-label-sm font-label-sm text-on-surface-variant">Great job reflecting on your practice today.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('react-demo-root'));
+        root.render(<DemoApp />);
+
+        // Simple nav scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('top-nav');
+            if (window.scrollY > 10) {
+                nav.classList.add('shadow-md');
+            } else {
+                nav.classList.remove('shadow-md');
+            }
+        });
+    </script>
+</body></html>
