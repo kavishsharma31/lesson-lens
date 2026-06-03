@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #fffaf0;
+  --foreground: #16303d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--foreground);
+  background:
+    linear-gradient(90deg, rgba(8, 126, 139, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(8, 126, 139, 0.08) 1px, transparent 1px),
+    var(--background);
+  background-size: 34px 34px;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #ffc53d;
+  outline-offset: 3px;
+}
+
+::selection {
+  color: #16303d;
+  background: #ffc53d;
+}
+
+.paper-panel {
+  border: 2px solid rgba(22, 48, 61, 0.12);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.72)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(8, 126, 139, 0.08) 0,
+      rgba(8, 126, 139, 0.08) 1px,
+      transparent 1px,
+      transparent 32px
+    );
+}
+
+.confetti-edge {
+  background-image:
+    linear-gradient(135deg, #ffc53d 0 20%, transparent 20% 100%),
+    linear-gradient(45deg, #f05a5b 0 22%, transparent 22% 100%),
+    linear-gradient(135deg, transparent 0 70%, #087e8b 70% 100%);
+}
