@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { sampleTranscripts } from "../lib/sampleTranscript";
 import type { FeedbackResponse, LessonLensMetric } from "../lib/types";
 
 type ViewState = "empty" | "filled" | "loading" | "success";
-
-const sampleTranscript =
-  "Teacher: Good morning class. Today we're looking at states of matter. Who can tell me what happens when you heat water on a stove?\nStudent (Sarah): It gets hot.\nTeacher: Yes, it gets hot. What else?\nStudent (Tom): It makes bubbles and steam.\nTeacher: Correct. That steam is gas. The liquid turns into gas. Now open your books to page 42.";
 
 const loadingMessages = [
   "Listening to transcript...",
@@ -129,6 +127,9 @@ export default function Home() {
   const [loadingIndex, setLoadingIndex] = useState(0);
   const [feedback, setFeedback] = useState<FeedbackResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedSampleId, setSelectedSampleId] = useState(sampleTranscripts[0]?.id ?? "");
+  const selectedSample =
+    sampleTranscripts.find((sample) => sample.id === selectedSampleId) ?? sampleTranscripts[0];
 
   useEffect(() => {
     if (viewState !== "loading") {
@@ -145,7 +146,26 @@ export default function Home() {
   }, [viewState]);
 
   function loadSampleTranscript() {
-    setTranscript(sampleTranscript);
+    if (!selectedSample) {
+      return;
+    }
+
+    setTranscript(selectedSample.transcript);
+    setViewState("filled");
+    setLoadingIndex(0);
+    setFeedback(null);
+    setErrorMessage("");
+  }
+
+  function selectSampleTranscript(sampleId: string) {
+    const sample = sampleTranscripts.find((item) => item.id === sampleId);
+
+    if (!sample) {
+      return;
+    }
+
+    setSelectedSampleId(sample.id);
+    setTranscript(sample.transcript);
     setViewState("filled");
     setLoadingIndex(0);
     setFeedback(null);
@@ -301,6 +321,23 @@ export default function Home() {
 
         {viewState !== "loading" && viewState !== "success" && (
           <section className="input-card" aria-label="Classroom transcript">
+            <div className="sample-picker">
+              <div>
+                <label htmlFor="sample-transcript">Sample transcript</label>
+                <p>{selectedSample?.description}</p>
+              </div>
+              <select
+                id="sample-transcript"
+                value={selectedSampleId}
+                onChange={(event) => selectSampleTranscript(event.target.value)}
+              >
+                {sampleTranscripts.map((sample) => (
+                  <option key={sample.id} value={sample.id}>
+                    {sample.title}
+                  </option>
+                ))}
+              </select>
+            </div>
             <textarea
               value={transcript}
               onChange={(event) => {
@@ -327,7 +364,7 @@ export default function Home() {
                   type="button"
                   onClick={loadSampleTranscript}
                 >
-                  Load Sample
+                  Load Sample Transcript
                 </button>
                 <button
                   className="analyze-button"
@@ -908,6 +945,51 @@ export default function Home() {
           border-radius: 30px;
           background: var(--surface-lowest);
           box-shadow: var(--shadow-1);
+        }
+
+        .sample-picker {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          margin-bottom: 18px;
+          padding: 16px;
+          border: 1px solid rgba(118, 117, 134, 0.22);
+          border-radius: 18px;
+          background: linear-gradient(135deg, var(--surface), var(--surface-low));
+        }
+
+        .sample-picker label {
+          display: block;
+          color: var(--on-surface);
+          font-size: 15px;
+          font-weight: 900;
+        }
+
+        .sample-picker p {
+          margin: 4px 0 0;
+          color: var(--on-variant);
+          font-size: 14px;
+          line-height: 1.4;
+        }
+
+        .sample-picker select {
+          min-width: 240px;
+          min-height: 46px;
+          padding: 0 40px 0 14px;
+          border: 1px solid rgba(118, 117, 134, 0.28);
+          border-radius: 14px;
+          outline: 0;
+          color: var(--on-surface);
+          background: white;
+          font-size: 15px;
+          font-weight: 800;
+          box-shadow: var(--shadow-1);
+        }
+
+        .sample-picker select:focus {
+          border-color: var(--primary);
+          box-shadow: 0 0 0 5px rgba(70, 72, 212, 0.1);
         }
 
         textarea {
@@ -1594,6 +1676,16 @@ export default function Home() {
           .input-card {
             padding: 18px;
             border-radius: 24px;
+          }
+
+          .sample-picker {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .sample-picker select {
+            width: 100%;
+            min-width: 0;
           }
 
           textarea {
