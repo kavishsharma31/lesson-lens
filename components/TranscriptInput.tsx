@@ -6,7 +6,7 @@ import EmptyState from "@/components/EmptyState";
 import FeedbackCard from "@/components/FeedbackCard";
 import LoadingState from "@/components/LoadingState";
 import { mockFeedback } from "@/lib/mockFeedback";
-import { sampleTranscript } from "@/lib/sampleTranscript";
+import { sampleTranscripts } from "@/lib/sampleTranscript";
 import type { FeedbackReport } from "@/lib/types";
 
 type AnalysisStatus = "idle" | "loading" | "complete";
@@ -29,7 +29,7 @@ export default function TranscriptInput() {
   }, []);
 
   function loadSampleTranscript() {
-    setTranscript(sampleTranscript);
+    setTranscript(sampleTranscripts[0]?.transcript ?? "");
     setFeedback(null);
     setStatus("idle");
   }

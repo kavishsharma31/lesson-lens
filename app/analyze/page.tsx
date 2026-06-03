@@ -166,6 +166,7 @@ export default function Home() {
   const [selectedSampleId, setSelectedSampleId] = useState(sampleTranscripts[0]?.id ?? "");
   const isSubmittingRef = useRef(false);
   const requestIdRef = useRef(0);
+  const isAnalyzing = viewState === "loading";
   const selectedSample =
     sampleTranscripts.find((sample) => sample.id === selectedSampleId) ?? sampleTranscripts[0];
 
@@ -387,7 +388,7 @@ export default function Home() {
                 <button
                   className="analyze-button"
                   type="button"
-                  disabled={viewState === "loading"}
+                  disabled={isAnalyzing}
                   onClick={analyzeClass}
                 >
                   <SymbolIcon name="sparkle" />
