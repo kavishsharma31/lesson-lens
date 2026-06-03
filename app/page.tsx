@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { FeedbackResponse, LessonLensMetric } from "../lib/types";
 
 type ViewState = "empty" | "filled" | "loading" | "success";
 
@@ -14,35 +15,26 @@ const loadingMessages = [
   "Preparing coaching card...",
 ];
 
-const metrics = [
+const metricPresentation: Record<
+  string,
   {
-    title: "Student Participation",
-    rating: "Medium",
-    evidence: "Teacher spoke for most of the exchange.",
-    note: "Pause after a question to invite one more student voice.",
+    accent: "primary" | "secondary" | "tertiary";
+    icon: string;
+  }
+> = {
+  "Student Participation": {
     accent: "tertiary",
     icon: "groups",
-    width: "60%",
   },
-  {
-    title: "Question Quality",
-    rating: "Recall-based",
-    evidence: "Students named facts and definitions.",
-    note: "Add one follow-up question that asks for reasoning.",
+  "Question Quality": {
     accent: "secondary",
     icon: "question",
-    width: "34%",
   },
-  {
-    title: "Language & Pacing",
-    rating: "Clear",
-    evidence: "The explanation used simple, direct wording.",
-    note: "Keep naming the concept after students describe it.",
+  "Language Clarity & Pacing": {
     accent: "primary",
     icon: "voice",
-    width: "74%",
   },
-];
+};
 
 function BrainIcon({ className = "" }: { className?: string }) {
   return (
@@ -84,10 +76,59 @@ function SymbolIcon({ name }: { name: string }) {
   return <span aria-hidden="true">{label}</span>;
 }
 
+function getMetricPresentation(title: string) {
+  return (
+    metricPresentation[title] ?? {
+      accent: "primary" as const,
+      icon: "sparkle",
+    }
+  );
+}
+
+function scoreWidthFromRating(rating: string) {
+  const normalized = rating.toLowerCase();
+
+  if (normalized.includes("active") || normalized.includes("rich") || normalized.includes("clear")) {
+    return "76%";
+  }
+
+  if (normalized.includes("medium") || normalized.includes("some")) {
+    return "60%";
+  }
+
+  if (normalized.includes("limited") || normalized.includes("recall") || normalized.includes("quick")) {
+    return "42%";
+  }
+
+  return "58%";
+}
+
+function metricCards(feedback: FeedbackResponse): Array<{
+  title: string;
+  metric: LessonLensMetric;
+}> {
+  return [
+    {
+      title: "Student Participation",
+      metric: feedback.student_participation,
+    },
+    {
+      title: "Question Quality",
+      metric: feedback.question_quality,
+    },
+    {
+      title: "Language Clarity & Pacing",
+      metric: feedback.language_clarity_and_pacing,
+    },
+  ];
+}
+
 export default function Home() {
   const [transcript, setTranscript] = useState("");
   const [viewState, setViewState] = useState<ViewState>("empty");
   const [loadingIndex, setLoadingIndex] = useState(0);
+  const [feedback, setFeedback] = useState<FeedbackResponse | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     if (viewState !== "loading") {
@@ -98,13 +139,8 @@ export default function Home() {
       setLoadingIndex((index) => (index + 1) % loadingMessages.length);
     }, 760);
 
-    const completeTimer = window.setTimeout(() => {
-      setViewState("success");
-    }, 3200);
-
     return () => {
       window.clearInterval(messageTimer);
-      window.clearTimeout(completeTimer);
     };
   }, [viewState]);
 
@@ -112,17 +148,59 @@ export default function Home() {
     setTranscript(sampleTranscript);
     setViewState("filled");
     setLoadingIndex(0);
+    setFeedback(null);
+    setErrorMessage("");
   }
 
-  function analyzeClass() {
+  async function analyzeClass() {
     setViewState("loading");
     setLoadingIndex(0);
+    setFeedback(null);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ transcript }),
+      });
+      const data = (await response.json().catch(() => null)) as
+        | FeedbackResponse
+        | { error?: { message?: string } }
+        | null;
+
+      if (!response.ok) {
+        const message =
+          data && "error" in data && data.error?.message
+            ? data.error.message
+            : "LessonLens could not analyze this transcript. Please try again.";
+        throw new Error(message);
+      }
+
+      if (!data || "error" in data) {
+        throw new Error("LessonLens returned an empty response. Please try again.");
+      }
+
+      setFeedback(data as FeedbackResponse);
+      setViewState("success");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "LessonLens could not analyze this transcript. Please try again.",
+      );
+      setViewState(transcript.trim() ? "filled" : "empty");
+    }
   }
 
   function clearPage() {
     setTranscript("");
     setViewState("empty");
     setLoadingIndex(0);
+    setFeedback(null);
+    setErrorMessage("");
   }
 
   return (
@@ -228,10 +306,17 @@ export default function Home() {
               onChange={(event) => {
                 setTranscript(event.target.value);
                 setViewState(event.target.value ? "filled" : "empty");
+                setFeedback(null);
+                setErrorMessage("");
               }}
               placeholder={`E.g., Teacher: Today we are talking about the water cycle. Can anyone tell me what happens to puddles when the sun comes out?\nStudent: They go away.\nTeacher: Right. That's called evaporation. Next...`}
               rows={7}
             />
+            {errorMessage ? (
+              <div className="error-message" role="alert">
+                {errorMessage}
+              </div>
+            ) : null}
             <div className="input-actions">
               <button className="clear-button" type="button" onClick={clearPage}>
                 Clear
@@ -267,7 +352,7 @@ export default function Home() {
           </section>
         )}
 
-        {viewState === "success" && (
+        {viewState === "success" && feedback && (
           <section className="feedback-stack" id="feedback" aria-live="polite">
             <div className="feedback-heading">
               <h3>Your Classroom Snapshot</h3>
@@ -276,6 +361,14 @@ export default function Home() {
                 Start Over
               </button>
             </div>
+
+            <article className="snapshot-card">
+              <div>
+                <span>Classroom Snapshot</span>
+                <h4>{feedback.classroom_snapshot.title}</h4>
+              </div>
+              <p>{feedback.classroom_snapshot.summary}</p>
+            </article>
 
             <article className="tomorrow-highlight">
               <div className="rocket-badge">
@@ -286,35 +379,38 @@ export default function Home() {
                   <span>Try This Tomorrow</span>
                   <small>Small change, big impact</small>
                 </div>
-                <h4>Add a "Why" after a "What"</h4>
+                <h4>{feedback.try_this_tomorrow.title}</h4>
                 <p>
-                  When a student answers correctly, follow up with:{" "}
-                  <strong>"How do you think that happens?"</strong> to shift
-                  from simple recall to active reasoning.
+                  {feedback.try_this_tomorrow.tip}{" "}
+                  <strong>{feedback.try_this_tomorrow.example_phrase}</strong>
                 </p>
               </div>
             </article>
 
             <div className="metric-grid">
-              {metrics.map((metric) => (
-                <article
-                  className={`metric-card accent-${metric.accent}`}
-                  key={metric.title}
-                >
-                  <div className="metric-topline">
-                    <span>{metric.title}</span>
-                    <i>
-                      <SymbolIcon name={metric.icon} />
-                    </i>
-                  </div>
-                  <h4>{metric.rating}</h4>
-                  <div className="meter">
-                    <span style={{ width: metric.width }} />
-                  </div>
-                  <p>{metric.evidence}</p>
-                  <small>{metric.note}</small>
-                </article>
-              ))}
+              {metricCards(feedback).map(({ title, metric }) => {
+                const presentation = getMetricPresentation(title);
+
+                return (
+                  <article
+                    className={`metric-card accent-${presentation.accent}`}
+                    key={title}
+                  >
+                    <div className="metric-topline">
+                      <span>{title}</span>
+                      <i>
+                        <SymbolIcon name={presentation.icon} />
+                      </i>
+                    </div>
+                    <h4>{metric.rating}</h4>
+                    <div className="meter">
+                      <span style={{ width: scoreWidthFromRating(metric.rating) }} />
+                    </div>
+                    <p>{metric.evidence}</p>
+                    <small>{metric.coaching_note}</small>
+                  </article>
+                );
+              })}
             </div>
 
             <div className="support-grid">
@@ -324,12 +420,8 @@ export default function Home() {
                 </div>
                 <div>
                   <span>One thing you did well</span>
-                  <h4>Clear and Direct Affirmation</h4>
-                  <p>
-                    You immediately confirmed correct answers and kept the
-                    lesson moving, which helps students feel secure enough to
-                    keep participating.
-                  </p>
+                  <h4>{feedback.strength.title}</h4>
+                  <p>{feedback.strength.feedback}</p>
                 </div>
               </article>
 
@@ -337,8 +429,11 @@ export default function Home() {
                 <div>
                   <SymbolIcon name="verified" />
                 </div>
-                <h4>Keep Growing</h4>
-                <p>Great job reflecting on your practice today.</p>
+                <h4>Encouragement</h4>
+                <p>{feedback.encouragement.message}</p>
+                {feedback.caution.note !== "No caution needed from this transcript." ? (
+                  <small>{feedback.caution.note}</small>
+                ) : null}
               </article>
             </div>
           </section>
@@ -839,6 +934,18 @@ export default function Home() {
           box-shadow: 0 0 0 5px rgba(70, 72, 212, 0.1);
         }
 
+        .error-message {
+          margin-top: 16px;
+          padding: 14px 16px;
+          border: 1px solid rgba(186, 26, 26, 0.16);
+          border-radius: 14px;
+          color: #93000a;
+          background: #ffdad6;
+          font-size: 15px;
+          font-weight: 700;
+          line-height: 1.45;
+        }
+
         .input-actions {
           display: flex;
           align-items: center;
@@ -942,6 +1049,50 @@ export default function Home() {
           gap: 8px;
           color: var(--primary);
           background: transparent;
+          font-weight: 800;
+        }
+
+        .snapshot-card {
+          display: grid;
+          gap: 10px;
+          padding: 24px;
+          border: 1px solid rgba(70, 72, 212, 0.12);
+          border-radius: 22px;
+          background: var(--surface-lowest);
+          box-shadow: var(--shadow-1);
+        }
+
+        .snapshot-card span {
+          display: inline-flex;
+          width: fit-content;
+          margin-bottom: 8px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          color: var(--primary);
+          background: rgba(70, 72, 212, 0.1);
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .snapshot-card h4 {
+          margin: 0;
+          font-family: "Nunito Sans", system-ui, sans-serif;
+          color: var(--on-surface);
+          font-size: 22px;
+          font-weight: 900;
+          letter-spacing: 0;
+        }
+
+        .snapshot-card p,
+        .snapshot-card small {
+          margin: 0;
+          color: var(--on-variant);
+          line-height: 1.5;
+        }
+
+        .snapshot-card small {
           font-weight: 800;
         }
 
@@ -1177,10 +1328,18 @@ export default function Home() {
         }
 
         .strength-card p,
-        .encouragement-card p {
+        .encouragement-card p,
+        .encouragement-card small {
           margin: 6px 0 0;
           color: var(--on-variant);
           line-height: 1.5;
+        }
+
+        .encouragement-card small {
+          display: block;
+          padding-top: 8px;
+          color: #6b3f00;
+          font-weight: 700;
         }
 
         .encouragement-card {

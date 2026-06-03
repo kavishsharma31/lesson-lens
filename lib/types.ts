@@ -1,3 +1,34 @@
+export type LessonLensMetric = {
+  rating: string;
+  evidence: string;
+  coaching_note: string;
+};
+
+export type FeedbackResponse = {
+  classroom_snapshot: {
+    title: string;
+    summary: string;
+  };
+  student_participation: LessonLensMetric;
+  question_quality: LessonLensMetric;
+  language_clarity_and_pacing: LessonLensMetric;
+  try_this_tomorrow: {
+    title: string;
+    tip: string;
+    example_phrase: string;
+  };
+  strength: {
+    title: string;
+    feedback: string;
+  };
+  encouragement: {
+    message: string;
+  };
+  caution: {
+    note: string;
+  };
+};
+
 export type MetricTone = "peacock" | "mango" | "poppy" | "leaf" | "grape";
 
 export type FeedbackMetric = {
