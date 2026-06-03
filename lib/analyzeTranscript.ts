@@ -224,7 +224,7 @@ function firstUsefulString(...values: unknown[]) {
     (value) =>
       typeof value === "string" &&
       value.trim() &&
-      !/^unknown from transcript$/i.test(value.trim()) &&
+      !/unknown from transcript/i.test(value.trim()) &&
       value.trim().toLowerCase() !== "undefined" &&
       value.trim().toLowerCase() !== "null",
   );
@@ -289,7 +289,7 @@ function cleanString(value: unknown, fallback: string) {
 
   if (
     !trimmed ||
-    /^unknown from transcript$/i.test(trimmed) ||
+    /unknown from transcript/i.test(trimmed) ||
     trimmed.toLowerCase() === "undefined" ||
     trimmed.toLowerCase() === "null"
   ) {

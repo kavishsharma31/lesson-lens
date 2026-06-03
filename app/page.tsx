@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { sampleTranscripts } from "../lib/sampleTranscript";
 import type { FeedbackResponse, LessonLensMetric } from "../lib/types";
 
 type ViewState = "empty" | "filled" | "loading" | "success";
+
+const MIN_TRANSCRIPT_LENGTH = 100;
+const MAX_TRANSCRIPT_LENGTH = 12000;
+const FALLBACK_FEEDBACK_TEXT = "Not enough evidence in this short transcript.";
+const NO_CAUTION = "No caution needed from this transcript.";
 
 const loadingMessages = [
   "Listening to transcript...",
@@ -121,6 +126,35 @@ function metricCards(feedback: FeedbackResponse): Array<{
   ];
 }
 
+function safeDisplayText(value: unknown, fallback = FALLBACK_FEEDBACK_TEXT) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+
+  if (
+    !trimmed ||
+    /unknown from transcript/i.test(trimmed) ||
+    trimmed.toLowerCase() === "undefined" ||
+    trimmed.toLowerCase() === "null"
+  ) {
+    return fallback;
+  }
+
+  return trimmed;
+}
+
+function safeCaution(note: unknown) {
+  const cleaned = safeDisplayText(note, NO_CAUTION);
+
+  if (["none", "n/a", "no caution", "no caution needed"].includes(cleaned.toLowerCase())) {
+    return NO_CAUTION;
+  }
+
+  return cleaned;
+}
+
 export default function Home() {
   const [transcript, setTranscript] = useState("");
   const [viewState, setViewState] = useState<ViewState>("empty");
@@ -128,6 +162,8 @@ export default function Home() {
   const [feedback, setFeedback] = useState<FeedbackResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedSampleId, setSelectedSampleId] = useState(sampleTranscripts[0]?.id ?? "");
+  const isSubmittingRef = useRef(false);
+  const requestIdRef = useRef(0);
   const selectedSample =
     sampleTranscripts.find((sample) => sample.id === selectedSampleId) ?? sampleTranscripts[0];
 
@@ -150,6 +186,8 @@ export default function Home() {
       return;
     }
 
+    isSubmittingRef.current = false;
+    requestIdRef.current += 1;
     setTranscript(selectedSample.transcript);
     setViewState("filled");
     setLoadingIndex(0);
@@ -164,6 +202,8 @@ export default function Home() {
       return;
     }
 
+    isSubmittingRef.current = false;
+    requestIdRef.current += 1;
     setSelectedSampleId(sample.id);
     setTranscript(sample.transcript);
     setViewState("filled");
@@ -173,6 +213,43 @@ export default function Home() {
   }
 
   async function analyzeClass() {
+    const trimmedTranscript = transcript.trim();
+
+    if (isSubmittingRef.current || viewState === "loading") {
+      return;
+    }
+
+    if (!trimmedTranscript) {
+      setErrorMessage("Please paste or load a classroom transcript before analyzing.");
+      setViewState("empty");
+      setFeedback(null);
+      setLoadingIndex(0);
+      return;
+    }
+
+    if (trimmedTranscript.length < MIN_TRANSCRIPT_LENGTH) {
+      setErrorMessage(
+        "Please add a little more transcript detail so LessonLens can give useful feedback.",
+      );
+      setViewState("filled");
+      setFeedback(null);
+      setLoadingIndex(0);
+      return;
+    }
+
+    if (trimmedTranscript.length > MAX_TRANSCRIPT_LENGTH) {
+      setErrorMessage(
+        "This transcript is a bit too long for one coaching card. Please keep it under 12,000 characters.",
+      );
+      setViewState("filled");
+      setFeedback(null);
+      setLoadingIndex(0);
+      return;
+    }
+
+    isSubmittingRef.current = true;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setViewState("loading");
     setLoadingIndex(0);
     setFeedback(null);
@@ -184,7 +261,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ transcript }),
+        body: JSON.stringify({ transcript: trimmedTranscript }),
       });
       const data = (await response.json().catch(() => null)) as
         | FeedbackResponse
@@ -192,30 +269,36 @@ export default function Home() {
         | null;
 
       if (!response.ok) {
-        const message =
-          data && "error" in data && data.error?.message
-            ? data.error.message
-            : "LessonLens could not analyze this transcript. Please try again.";
-        throw new Error(message);
+        throw new Error("LessonLens could not analyze this transcript. Please try again.");
       }
 
       if (!data || "error" in data) {
-        throw new Error("LessonLens returned an empty response. Please try again.");
+        throw new Error("LessonLens could not analyze this transcript. Please try again.");
+      }
+
+      if (requestId !== requestIdRef.current) {
+        return;
       }
 
       setFeedback(data as FeedbackResponse);
       setViewState("success");
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "LessonLens could not analyze this transcript. Please try again.",
-      );
+    } catch {
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
+      setErrorMessage("LessonLens could not analyze this transcript. Please try again.");
       setViewState(transcript.trim() ? "filled" : "empty");
+    } finally {
+      if (requestId === requestIdRef.current) {
+        isSubmittingRef.current = false;
+      }
     }
   }
 
   function clearPage() {
+    isSubmittingRef.current = false;
+    requestIdRef.current += 1;
     setTranscript("");
     setViewState("empty");
     setLoadingIndex(0);
@@ -369,6 +452,7 @@ export default function Home() {
                 <button
                   className="analyze-button"
                   type="button"
+                  disabled={viewState === "loading"}
                   onClick={analyzeClass}
                 >
                   <SymbolIcon name="sparkle" />
@@ -402,9 +486,9 @@ export default function Home() {
             <article className="snapshot-card">
               <div>
                 <span>Classroom Snapshot</span>
-                <h4>{feedback.classroom_snapshot.title}</h4>
+                <h4>{safeDisplayText(feedback.classroom_snapshot.title, "Classroom moment reviewed")}</h4>
               </div>
-              <p>{feedback.classroom_snapshot.summary}</p>
+              <p>{safeDisplayText(feedback.classroom_snapshot.summary)}</p>
             </article>
 
             <article className="tomorrow-highlight">
@@ -416,10 +500,10 @@ export default function Home() {
                   <span>Try This Tomorrow</span>
                   <small>Small change, big impact</small>
                 </div>
-                <h4>{feedback.try_this_tomorrow.title}</h4>
+                <h4>{safeDisplayText(feedback.try_this_tomorrow.title, "Try one focused move")}</h4>
                 <p>
-                  {feedback.try_this_tomorrow.tip}{" "}
-                  <strong>{feedback.try_this_tomorrow.example_phrase}</strong>
+                  {safeDisplayText(feedback.try_this_tomorrow.tip)}{" "}
+                  <strong>{safeDisplayText(feedback.try_this_tomorrow.example_phrase, "\"Can you explain your thinking?\"")}</strong>
                 </p>
               </div>
             </article>
@@ -439,12 +523,12 @@ export default function Home() {
                         <SymbolIcon name={presentation.icon} />
                       </i>
                     </div>
-                    <h4>{metric.rating}</h4>
+                    <h4>{safeDisplayText(metric.rating, "Needs more evidence")}</h4>
                     <div className="meter">
                       <span style={{ width: scoreWidthFromRating(metric.rating) }} />
                     </div>
-                    <p>{metric.evidence}</p>
-                    <small>{metric.coaching_note}</small>
+                    <p>{safeDisplayText(metric.evidence)}</p>
+                    <small>{safeDisplayText(metric.coaching_note)}</small>
                   </article>
                 );
               })}
@@ -457,8 +541,8 @@ export default function Home() {
                 </div>
                 <div>
                   <span>One thing you did well</span>
-                  <h4>{feedback.strength.title}</h4>
-                  <p>{feedback.strength.feedback}</p>
+                  <h4>{safeDisplayText(feedback.strength.title, "A strength to keep")}</h4>
+                  <p>{safeDisplayText(feedback.strength.feedback)}</p>
                 </div>
               </article>
 
@@ -467,9 +551,9 @@ export default function Home() {
                   <SymbolIcon name="verified" />
                 </div>
                 <h4>Encouragement</h4>
-                <p>{feedback.encouragement.message}</p>
-                {feedback.caution.note !== "No caution needed from this transcript." ? (
-                  <small>{feedback.caution.note}</small>
+                <p>{safeDisplayText(feedback.encouragement.message, "You are reflecting on your teaching, and that is a strong professional habit.")}</p>
+                {safeCaution(feedback.caution.note) !== NO_CAUTION ? (
+                  <small>{safeCaution(feedback.caution.note)}</small>
                 ) : null}
               </article>
             </div>
@@ -687,6 +771,12 @@ export default function Home() {
         .analyze-button:hover {
           transform: translateY(-1px);
           box-shadow: var(--shadow-2);
+        }
+
+        .analyze-button:disabled {
+          cursor: wait;
+          opacity: 0.72;
+          transform: none;
         }
 
         .start-button {
