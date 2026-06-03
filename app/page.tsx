@@ -1,43 +1,6 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
-import { sampleTranscripts } from "../lib/sampleTranscript";
-import type { FeedbackResponse, LessonLensMetric } from "../lib/types";
-
-type ViewState = "empty" | "filled" | "loading" | "success";
-
-const MIN_TRANSCRIPT_LENGTH = 100;
-const MAX_TRANSCRIPT_LENGTH = 12000;
-const FALLBACK_FEEDBACK_TEXT = "Not enough evidence in this short transcript.";
-const NO_CAUTION = "No caution needed from this transcript.";
-
-const loadingMessages = [
-  "Listening to transcript...",
-  "Analyzing question types...",
-  "Identifying strengths...",
-  "Preparing coaching card...",
-];
-
-const metricPresentation: Record<
-  string,
-  {
-    accent: "primary" | "secondary" | "tertiary";
-    icon: string;
-  }
-> = {
-  "Student Participation": {
-    accent: "tertiary",
-    icon: "groups",
-  },
-  "Question Quality": {
-    accent: "secondary",
-    icon: "question",
-  },
-  "Language Clarity & Pacing": {
-    accent: "primary",
-    icon: "voice",
-  },
-};
+import Link from "next/link";
+import { DemoVideoSection } from "../components/DemoVideoSection";
+import { TeacherGrowthSection } from "../components/TeacherGrowthSection";
 
 function BrainIcon({ className = "" }: { className?: string }) {
   return (
@@ -67,269 +30,33 @@ function SymbolIcon({ name }: { name: string }) {
     sparkle: "\u2726",
     groups: "\u25cc",
     question: "?",
-    voice: "\u224b",
     light: "!",
-    rocket: "\u2191",
-    heart: "\u2665",
-    verified: "\u2713",
-    refresh: "\u21bb",
   };
   const label = iconLabels[name] ?? "";
 
   return <span aria-hidden="true">{label}</span>;
 }
 
-function getMetricPresentation(title: string) {
-  return (
-    metricPresentation[title] ?? {
-      accent: "primary" as const,
-      icon: "sparkle",
-    }
-  );
-}
-
-function scoreWidthFromRating(rating: string) {
-  const normalized = rating.toLowerCase();
-
-  if (normalized.includes("active") || normalized.includes("rich") || normalized.includes("clear")) {
-    return "76%";
-  }
-
-  if (normalized.includes("medium") || normalized.includes("some")) {
-    return "60%";
-  }
-
-  if (normalized.includes("limited") || normalized.includes("recall") || normalized.includes("quick")) {
-    return "42%";
-  }
-
-  return "58%";
-}
-
-function metricCards(feedback: FeedbackResponse): Array<{
-  title: string;
-  metric: LessonLensMetric;
-}> {
-  return [
-    {
-      title: "Student Participation",
-      metric: feedback.student_participation,
-    },
-    {
-      title: "Question Quality",
-      metric: feedback.question_quality,
-    },
-    {
-      title: "Language Clarity & Pacing",
-      metric: feedback.language_clarity_and_pacing,
-    },
-  ];
-}
-
-function safeDisplayText(value: unknown, fallback = FALLBACK_FEEDBACK_TEXT) {
-  if (typeof value !== "string") {
-    return fallback;
-  }
-
-  const trimmed = value.trim();
-
-  if (
-    !trimmed ||
-    /unknown from transcript/i.test(trimmed) ||
-    trimmed.toLowerCase() === "undefined" ||
-    trimmed.toLowerCase() === "null"
-  ) {
-    return fallback;
-  }
-
-  return trimmed;
-}
-
-function safeCaution(note: unknown) {
-  const cleaned = safeDisplayText(note, NO_CAUTION);
-
-  if (["none", "n/a", "no caution", "no caution needed"].includes(cleaned.toLowerCase())) {
-    return NO_CAUTION;
-  }
-
-  return cleaned;
-}
-
 export default function Home() {
-  const [transcript, setTranscript] = useState("");
-  const [viewState, setViewState] = useState<ViewState>("empty");
-  const [loadingIndex, setLoadingIndex] = useState(0);
-  const [feedback, setFeedback] = useState<FeedbackResponse | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [selectedSampleId, setSelectedSampleId] = useState(sampleTranscripts[0]?.id ?? "");
-  const isSubmittingRef = useRef(false);
-  const requestIdRef = useRef(0);
-  const selectedSample =
-    sampleTranscripts.find((sample) => sample.id === selectedSampleId) ?? sampleTranscripts[0];
-
-  useEffect(() => {
-    if (viewState !== "loading") {
-      return;
-    }
-
-    const messageTimer = window.setInterval(() => {
-      setLoadingIndex((index) => (index + 1) % loadingMessages.length);
-    }, 760);
-
-    return () => {
-      window.clearInterval(messageTimer);
-    };
-  }, [viewState]);
-
-  function loadSampleTranscript() {
-    if (!selectedSample) {
-      return;
-    }
-
-    isSubmittingRef.current = false;
-    requestIdRef.current += 1;
-    setTranscript(selectedSample.transcript);
-    setViewState("filled");
-    setLoadingIndex(0);
-    setFeedback(null);
-    setErrorMessage("");
-  }
-
-  function selectSampleTranscript(sampleId: string) {
-    const sample = sampleTranscripts.find((item) => item.id === sampleId);
-
-    if (!sample) {
-      return;
-    }
-
-    isSubmittingRef.current = false;
-    requestIdRef.current += 1;
-    setSelectedSampleId(sample.id);
-    setTranscript(sample.transcript);
-    setViewState("filled");
-    setLoadingIndex(0);
-    setFeedback(null);
-    setErrorMessage("");
-  }
-
-  async function analyzeClass() {
-    const trimmedTranscript = transcript.trim();
-
-    if (isSubmittingRef.current || viewState === "loading") {
-      return;
-    }
-
-    if (!trimmedTranscript) {
-      setErrorMessage("Please paste or load a classroom transcript before analyzing.");
-      setViewState("empty");
-      setFeedback(null);
-      setLoadingIndex(0);
-      return;
-    }
-
-    if (trimmedTranscript.length < MIN_TRANSCRIPT_LENGTH) {
-      setErrorMessage(
-        "Please add a little more transcript detail so LessonLens can give useful feedback.",
-      );
-      setViewState("filled");
-      setFeedback(null);
-      setLoadingIndex(0);
-      return;
-    }
-
-    if (trimmedTranscript.length > MAX_TRANSCRIPT_LENGTH) {
-      setErrorMessage(
-        "This transcript is a bit too long for one coaching card. Please keep it under 12,000 characters.",
-      );
-      setViewState("filled");
-      setFeedback(null);
-      setLoadingIndex(0);
-      return;
-    }
-
-    isSubmittingRef.current = true;
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-    setViewState("loading");
-    setLoadingIndex(0);
-    setFeedback(null);
-    setErrorMessage("");
-
-    try {
-      const response = await fetch("/api/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ transcript: trimmedTranscript }),
-      });
-      const data = (await response.json().catch(() => null)) as
-        | FeedbackResponse
-        | { error?: { message?: string } }
-        | null;
-
-      if (!response.ok) {
-        throw new Error("LessonLens could not analyze this transcript. Please try again.");
-      }
-
-      if (!data || "error" in data) {
-        throw new Error("LessonLens could not analyze this transcript. Please try again.");
-      }
-
-      if (requestId !== requestIdRef.current) {
-        return;
-      }
-
-      setFeedback(data as FeedbackResponse);
-      setViewState("success");
-    } catch {
-      if (requestId !== requestIdRef.current) {
-        return;
-      }
-
-      setErrorMessage("LessonLens could not analyze this transcript. Please try again.");
-      setViewState(transcript.trim() ? "filled" : "empty");
-    } finally {
-      if (requestId === requestIdRef.current) {
-        isSubmittingRef.current = false;
-      }
-    }
-  }
-
-  function clearPage() {
-    isSubmittingRef.current = false;
-    requestIdRef.current += 1;
-    setTranscript("");
-    setViewState("empty");
-    setLoadingIndex(0);
-    setFeedback(null);
-    setErrorMessage("");
-  }
-
   return (
     <main className="lesson-page">
       <header className="top-bar">
         <div className="top-bar-inner">
-          <a className="brand" href="#top" aria-label="LessonLens home">
+          <Link className="brand" href="/" aria-label="LessonLens home">
             <BrainIcon className="brand-mark" />
             <span>LessonLens</span>
-          </a>
+          </Link>
           <span className="track-chip">School Education Track</span>
           <nav className="desktop-nav" aria-label="Primary navigation">
-            <a className="active" href="#demo">
+            <Link className="active" href="/">
               Dashboard
-            </a>
-            <a href="#impact">Observations</a>
-            <a href="#feedback">History</a>
-            <a href="#footer">Resources</a>
+            </Link>
+            <Link href="/analyze">Observations</Link>
           </nav>
           <div className="header-actions">
-            <button className="sign-in" type="button">
-              Sign In
-            </button>
-            <a className="start-button" href="#demo">
+            <Link className="start-button" href="/analyze">
               Start Observation
-            </a>
+            </Link>
           </div>
         </div>
       </header>
@@ -349,11 +76,11 @@ export default function Home() {
               encouraging coaching card in seconds. No grading, just growth.
             </p>
             <div className="hero-actions">
-              <a className="primary-button" href="#demo">
+              <Link className="primary-button" href="/analyze">
                 Try it now
                 <SymbolIcon name="arrow" />
-              </a>
-              <a className="secondary-button" href="#impact">
+              </Link>
+              <a className="secondary-button" href="#demo-video">
                 Watch Video
               </a>
             </div>
@@ -370,7 +97,7 @@ export default function Home() {
               <div className="progress-track">
                 <span className="progress-fill" />
               </div>
-              <p>Medium • 60%</p>
+              <p>Medium {"\u2022"} 60%</p>
             </div>
 
             <div className="floating-card question-card">
@@ -396,196 +123,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="demo-section" id="demo">
-        <div className="section-heading">
-          <h2>Analyze a classroom moment</h2>
-          <p>Paste your transcript below to see LessonLens in action.</p>
-        </div>
+      <DemoVideoSection />
 
-        {viewState !== "loading" && viewState !== "success" && (
-          <section className="input-card" aria-label="Classroom transcript">
-            <div className="sample-picker">
-              <div>
-                <label htmlFor="sample-transcript">Sample transcript</label>
-                <p>{selectedSample?.description}</p>
-              </div>
-              <select
-                id="sample-transcript"
-                value={selectedSampleId}
-                onChange={(event) => selectSampleTranscript(event.target.value)}
-              >
-                {sampleTranscripts.map((sample) => (
-                  <option key={sample.id} value={sample.id}>
-                    {sample.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <textarea
-              value={transcript}
-              onChange={(event) => {
-                setTranscript(event.target.value);
-                setViewState(event.target.value ? "filled" : "empty");
-                setFeedback(null);
-                setErrorMessage("");
-              }}
-              placeholder={`E.g., Teacher: Today we are talking about the water cycle. Can anyone tell me what happens to puddles when the sun comes out?\nStudent: They go away.\nTeacher: Right. That's called evaporation. Next...`}
-              rows={7}
-            />
-            {errorMessage ? (
-              <div className="error-message" role="alert">
-                {errorMessage}
-              </div>
-            ) : null}
-            <div className="input-actions">
-              <button className="clear-button" type="button" onClick={clearPage}>
-                Clear
-              </button>
-              <div className="button-group">
-                <button
-                  className="sample-button"
-                  type="button"
-                  onClick={loadSampleTranscript}
-                >
-                  Load Sample Transcript
-                </button>
-                <button
-                  className="analyze-button"
-                  type="button"
-                  disabled={viewState === "loading"}
-                  onClick={analyzeClass}
-                >
-                  <SymbolIcon name="sparkle" />
-                  Analyze My Class
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {viewState === "loading" && (
-          <section className="loading-card" aria-live="polite">
-            <div className="loader-ring">
-              <span />
-            </div>
-            <h3>{loadingMessages[loadingIndex]}</h3>
-            <p>Building a practical, encouraging coaching card.</p>
-          </section>
-        )}
-
-        {viewState === "success" && feedback && (
-          <section className="feedback-stack" id="feedback" aria-live="polite">
-            <div className="feedback-heading">
-              <h3>Your Classroom Snapshot</h3>
-              <button type="button" onClick={clearPage}>
-                <SymbolIcon name="refresh" />
-                Start Over
-              </button>
-            </div>
-
-            <article className="snapshot-card">
-              <div>
-                <span>Classroom Snapshot</span>
-                <h4>{safeDisplayText(feedback.classroom_snapshot.title, "Classroom moment reviewed")}</h4>
-              </div>
-              <p>{safeDisplayText(feedback.classroom_snapshot.summary)}</p>
-            </article>
-
-            <article className="tomorrow-highlight">
-              <div className="rocket-badge">
-                <SymbolIcon name="rocket" />
-              </div>
-              <div>
-                <div className="chip-row">
-                  <span>Try This Tomorrow</span>
-                  <small>Small change, big impact</small>
-                </div>
-                <h4>{safeDisplayText(feedback.try_this_tomorrow.title, "Try one focused move")}</h4>
-                <p>
-                  {safeDisplayText(feedback.try_this_tomorrow.tip)}{" "}
-                  <strong>{safeDisplayText(feedback.try_this_tomorrow.example_phrase, "\"Can you explain your thinking?\"")}</strong>
-                </p>
-              </div>
-            </article>
-
-            <div className="metric-grid">
-              {metricCards(feedback).map(({ title, metric }) => {
-                const presentation = getMetricPresentation(title);
-
-                return (
-                  <article
-                    className={`metric-card accent-${presentation.accent}`}
-                    key={title}
-                  >
-                    <div className="metric-topline">
-                      <span>{title}</span>
-                      <i>
-                        <SymbolIcon name={presentation.icon} />
-                      </i>
-                    </div>
-                    <h4>{safeDisplayText(metric.rating, "Needs more evidence")}</h4>
-                    <div className="meter">
-                      <span style={{ width: scoreWidthFromRating(metric.rating) }} />
-                    </div>
-                    <p>{safeDisplayText(metric.evidence)}</p>
-                    <small>{safeDisplayText(metric.coaching_note)}</small>
-                  </article>
-                );
-              })}
-            </div>
-
-            <div className="support-grid">
-              <article className="strength-card">
-                <div className="heart-badge">
-                  <SymbolIcon name="heart" />
-                </div>
-                <div>
-                  <span>One thing you did well</span>
-                  <h4>{safeDisplayText(feedback.strength.title, "A strength to keep")}</h4>
-                  <p>{safeDisplayText(feedback.strength.feedback)}</p>
-                </div>
-              </article>
-
-              <article className="encouragement-card">
-                <div>
-                  <SymbolIcon name="verified" />
-                </div>
-                <h4>Encouragement</h4>
-                <p>{safeDisplayText(feedback.encouragement.message, "You are reflecting on your teaching, and that is a strong professional habit.")}</p>
-                {safeCaution(feedback.caution.note) !== NO_CAUTION ? (
-                  <small>{safeCaution(feedback.caution.note)}</small>
-                ) : null}
-              </article>
-            </div>
-          </section>
-        )}
-      </section>
-
-      <section className="impact-section" id="impact">
-        <div className="impact-inner">
-          <div>
-            <span className="section-kicker">Built for teacher growth</span>
-            <h2>A feedback loop that feels like a coach, not a gradebook.</h2>
-          </div>
-          <div className="impact-list">
-            <article>
-              <strong>01</strong>
-              <h3>Paste a real classroom moment</h3>
-              <p>Use short transcripts from observation notes, recordings, or memory.</p>
-            </article>
-            <article>
-              <strong>02</strong>
-              <h3>Get a focused snapshot</h3>
-              <p>See participation, question quality, pacing, and a next step.</p>
-            </article>
-            <article>
-              <strong>03</strong>
-              <h3>Try one small move tomorrow</h3>
-              <p>Leave with a concrete coaching card teachers can actually use.</p>
-            </article>
-          </div>
-        </div>
-      </section>
+      <TeacherGrowthSection />
 
       <footer className="site-footer" id="footer">
         <div className="footer-brand">
@@ -613,14 +153,12 @@ export default function Home() {
           --surface-highest: #d3e4fe;
           --on-surface: #0b1c30;
           --on-variant: #464554;
-          --outline: #767586;
           --outline-variant: #c7c4d7;
           --primary: #4648d4;
           --primary-container: #6063ee;
           --secondary: #8127cf;
           --secondary-container: #9c48ea;
           --tertiary: #00628d;
-          --tertiary-container: #007cb1;
           --shadow-1: 0 4px 20px rgba(70, 72, 212, 0.05);
           --shadow-2: 0 12px 32px rgba(70, 72, 212, 0.12);
         }
@@ -640,20 +178,9 @@ export default function Home() {
           font-family: "Inter", system-ui, sans-serif;
         }
 
-        button,
-        textarea,
-        a {
-          font: inherit;
-        }
-
         a {
           color: inherit;
           text-decoration: none;
-        }
-
-        button {
-          border: 0;
-          cursor: pointer;
         }
 
         .lesson-page {
@@ -747,15 +274,8 @@ export default function Home() {
           margin-left: auto;
         }
 
-        .sign-in {
-          color: var(--primary);
-          background: transparent;
-          font-weight: 700;
-        }
-
         .start-button,
-        .primary-button,
-        .analyze-button {
+        .primary-button {
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -767,16 +287,9 @@ export default function Home() {
         }
 
         .start-button:hover,
-        .primary-button:hover,
-        .analyze-button:hover {
+        .primary-button:hover {
           transform: translateY(-1px);
           box-shadow: var(--shadow-2);
-        }
-
-        .analyze-button:disabled {
-          cursor: wait;
-          opacity: 0.72;
-          transform: none;
         }
 
         .start-button {
@@ -828,8 +341,7 @@ export default function Home() {
         }
 
         .hero h1,
-        .section-heading h2,
-        .impact-section h2 {
+        .section-heading h2 {
           margin: 0;
           color: var(--on-surface);
           font-family: "Nunito Sans", system-ui, sans-serif;
@@ -998,8 +510,8 @@ export default function Home() {
           font-weight: 600;
         }
 
-        .demo-section {
-          padding: 66px 20px 62px;
+        .video-section {
+          padding: 66px 20px 72px;
           border-top: 1px solid rgba(199, 196, 215, 0.45);
           border-bottom: 1px solid rgba(199, 196, 215, 0.45);
           background: rgba(229, 238, 255, 0.45);
@@ -1017,579 +529,61 @@ export default function Home() {
         }
 
         .section-heading p {
-          margin: 14px 0 0;
+          max-width: 620px;
+          margin: 14px auto 0;
           color: var(--on-variant);
           font-size: 21px;
           line-height: 1.4;
         }
 
-        .input-card,
-        .feedback-stack,
-        .loading-card {
+        .video-frame {
           width: min(100%, 952px);
+          aspect-ratio: 16 / 9;
           margin: 0 auto;
-        }
-
-        .input-card {
-          padding: 30px;
-          border-radius: 30px;
-          background: var(--surface-lowest);
-          box-shadow: var(--shadow-1);
-        }
-
-        .sample-picker {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 18px;
-          margin-bottom: 18px;
-          padding: 16px;
-          border: 1px solid rgba(118, 117, 134, 0.22);
-          border-radius: 18px;
-          background: linear-gradient(135deg, var(--surface), var(--surface-low));
-        }
-
-        .sample-picker label {
-          display: block;
-          color: var(--on-surface);
-          font-size: 15px;
-          font-weight: 900;
-        }
-
-        .sample-picker p {
-          margin: 4px 0 0;
-          color: var(--on-variant);
-          font-size: 14px;
-          line-height: 1.4;
-        }
-
-        .sample-picker select {
-          min-width: 240px;
-          min-height: 46px;
-          padding: 0 40px 0 14px;
-          border: 1px solid rgba(118, 117, 134, 0.28);
-          border-radius: 14px;
-          outline: 0;
-          color: var(--on-surface);
-          background: white;
-          font-size: 15px;
-          font-weight: 800;
-          box-shadow: var(--shadow-1);
-        }
-
-        .sample-picker select:focus {
-          border-color: var(--primary);
-          box-shadow: 0 0 0 5px rgba(70, 72, 212, 0.1);
-        }
-
-        textarea {
-          width: 100%;
-          min-height: 224px;
-          resize: vertical;
-          padding: 25px 22px;
-          border: 1px solid rgba(118, 117, 134, 0.28);
-          border-radius: 18px;
-          outline: 0;
-          color: var(--on-surface);
-          background: var(--surface);
-          font-size: 21px;
-          line-height: 1.45;
-          transition: border-color 180ms ease, box-shadow 180ms ease;
-        }
-
-        textarea::placeholder {
-          color: rgba(70, 69, 84, 0.74);
-        }
-
-        textarea:focus {
-          border-color: var(--primary);
-          box-shadow: 0 0 0 5px rgba(70, 72, 212, 0.1);
-        }
-
-        .error-message {
-          margin-top: 16px;
-          padding: 14px 16px;
-          border: 1px solid rgba(186, 26, 26, 0.16);
-          border-radius: 14px;
-          color: #93000a;
-          background: #ffdad6;
-          font-size: 15px;
-          font-weight: 700;
-          line-height: 1.45;
-        }
-
-        .input-actions {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 18px;
-          margin-top: 32px;
-        }
-
-        .clear-button {
-          color: #232433;
-          background: transparent;
-          font-size: 17px;
-          font-weight: 800;
-        }
-
-        .button-group {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16px;
-        }
-
-        .sample-button,
-        .analyze-button {
-          min-height: 54px;
-          padding: 0 27px;
-          border-radius: 14px;
-          font-size: 17px;
-          font-weight: 900;
-        }
-
-        .sample-button {
-          color: #071528;
-          border: 1px solid #cbd6ef;
-          background: var(--surface-high);
-        }
-
-        .loading-card {
-          display: grid;
-          place-items: center;
-          min-height: 360px;
-          text-align: center;
-          border-radius: 30px;
-          background: rgba(255, 255, 255, 0.62);
-          box-shadow: var(--shadow-1);
-        }
-
-        .loader-ring {
-          position: relative;
-          width: 78px;
-          height: 78px;
-          margin-bottom: 24px;
-          border-radius: 50%;
-          border: 5px solid var(--surface-highest);
-        }
-
-        .loader-ring span {
-          position: absolute;
-          inset: -5px;
-          border-radius: inherit;
-          border: 5px solid var(--primary);
-          border-top-color: transparent;
-          animation: spin 900ms linear infinite;
-        }
-
-        .loading-card h3 {
-          margin: 0;
-          color: var(--on-surface);
-          font-family: "Nunito Sans", system-ui, sans-serif;
-          font-size: 24px;
-          font-weight: 800;
-        }
-
-        .loading-card p {
-          margin: 10px 0 0;
-          color: var(--on-variant);
-        }
-
-        .feedback-stack {
-          display: flex;
-          flex-direction: column;
-          gap: 22px;
-        }
-
-        .feedback-heading {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-        }
-
-        .feedback-heading h3 {
-          margin: 0;
-          font-family: "Nunito Sans", system-ui, sans-serif;
-          font-size: 24px;
-          font-weight: 900;
-        }
-
-        .feedback-heading button {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          color: var(--primary);
-          background: transparent;
-          font-weight: 800;
-        }
-
-        .snapshot-card {
-          display: grid;
-          gap: 10px;
-          padding: 24px;
-          border: 1px solid rgba(70, 72, 212, 0.12);
-          border-radius: 22px;
-          background: var(--surface-lowest);
-          box-shadow: var(--shadow-1);
-        }
-
-        .snapshot-card span {
-          display: inline-flex;
-          width: fit-content;
-          margin-bottom: 8px;
-          padding: 6px 10px;
-          border-radius: 999px;
-          color: var(--primary);
-          background: rgba(70, 72, 212, 0.1);
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-
-        .snapshot-card h4 {
-          margin: 0;
-          font-family: "Nunito Sans", system-ui, sans-serif;
-          color: var(--on-surface);
-          font-size: 22px;
-          font-weight: 900;
-          letter-spacing: 0;
-        }
-
-        .snapshot-card p,
-        .snapshot-card small {
-          margin: 0;
-          color: var(--on-variant);
-          line-height: 1.5;
-        }
-
-        .snapshot-card small {
-          font-weight: 800;
-        }
-
-        .tomorrow-highlight {
-          position: relative;
           overflow: hidden;
-          display: grid;
-          grid-template-columns: auto 1fr;
-          gap: 22px;
-          padding: 28px;
-          border: 1px solid rgba(70, 72, 212, 0.25);
-          border-radius: 24px;
+          border: 1px solid rgba(70, 72, 212, 0.12);
+          border-radius: 30px;
           background:
-            radial-gradient(circle at 100% 0%, rgba(70, 72, 212, 0.16), transparent 14rem),
-            linear-gradient(90deg, rgba(73, 75, 214, 0.1), rgba(129, 39, 207, 0.1));
+            radial-gradient(circle at 50% 20%, rgba(70, 72, 212, 0.14), transparent 18rem),
+            linear-gradient(135deg, var(--surface-lowest), var(--surface-low));
           box-shadow: var(--shadow-2);
         }
 
-        .rocket-badge,
-        .heart-badge {
-          display: grid;
-          place-items: center;
-          flex: 0 0 auto;
-          color: white;
-          background: linear-gradient(135deg, var(--primary), var(--secondary));
-          box-shadow: 0 12px 24px rgba(70, 72, 212, 0.18);
-        }
-
-        .rocket-badge {
-          width: 58px;
-          height: 58px;
-          border-radius: 18px;
-          font-size: 28px;
-        }
-
-        .chip-row {
-          display: flex;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 10px;
-          margin-bottom: 12px;
-        }
-
-        .chip-row span,
-        .strength-card span,
-        .section-kicker {
-          display: inline-flex;
-          width: fit-content;
-          border-radius: 999px;
-          color: var(--primary);
-          background: rgba(70, 72, 212, 0.1);
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-
-        .chip-row span {
-          padding: 7px 12px;
-        }
-
-        .chip-row small {
-          padding: 4px 8px;
-          border: 1px solid rgba(199, 196, 215, 0.45);
-          border-radius: 8px;
-          background: white;
-          color: var(--on-variant);
-          font-size: 11px;
-          font-weight: 800;
-        }
-
-        .tomorrow-highlight h4,
-        .metric-card h4,
-        .strength-card h4,
-        .encouragement-card h4,
-        .impact-list h3 {
-          margin: 0;
-          font-family: "Nunito Sans", system-ui, sans-serif;
-          color: var(--on-surface);
-          font-weight: 900;
-          letter-spacing: 0;
-        }
-
-        .tomorrow-highlight h4 {
-          margin-bottom: 8px;
-          font-size: 28px;
-        }
-
-        .tomorrow-highlight p {
-          margin: 0;
-          color: var(--on-variant);
-          font-size: 18px;
-          line-height: 1.55;
-        }
-
-        .tomorrow-highlight strong {
-          color: var(--on-surface);
-          border-radius: 6px;
-          background: rgba(70, 72, 212, 0.07);
-          padding: 0 4px;
-        }
-
-        .metric-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 18px;
-        }
-
-        .metric-card,
-        .strength-card,
-        .encouragement-card,
-        .impact-list article {
-          border-radius: 22px;
-          background: var(--surface-lowest);
-          box-shadow: var(--shadow-1);
-        }
-
-        .metric-card {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          padding: 22px;
-          border-left: 5px solid var(--primary);
-          box-shadow: inset 0 0 0 1px rgba(70, 72, 212, 0.1), var(--shadow-1);
-        }
-
-        .metric-card.accent-secondary {
-          border-left-color: var(--secondary);
-        }
-
-        .metric-card.accent-tertiary {
-          border-left-color: var(--tertiary);
-        }
-
-        .metric-topline {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 16px;
-          color: var(--outline);
-          font-size: 14px;
-          font-weight: 900;
-        }
-
-        .metric-topline i {
-          display: grid;
-          place-items: center;
-          width: 32px;
-          height: 32px;
-          border-radius: 10px;
-          color: var(--primary);
-          background: rgba(70, 72, 212, 0.1);
-          font-style: normal;
-        }
-
-        .accent-secondary .metric-topline i {
-          color: var(--secondary);
-          background: rgba(129, 39, 207, 0.1);
-        }
-
-        .accent-tertiary .metric-topline i {
-          color: var(--tertiary);
-          background: rgba(0, 98, 141, 0.1);
-        }
-
-        .metric-card h4 {
-          font-size: 21px;
-        }
-
-        .meter {
-          height: 7px;
-          overflow: hidden;
-          border-radius: 999px;
-          background: var(--surface-low);
-        }
-
-        .meter span {
-          display: block;
+        .video-frame iframe {
+          width: 100%;
           height: 100%;
-          border-radius: inherit;
-          background: var(--primary);
+          border: 0;
         }
 
-        .accent-secondary .meter span {
-          background: var(--secondary);
-        }
-
-        .accent-tertiary .meter span {
-          background: var(--tertiary);
-        }
-
-        .metric-card p,
-        .metric-card small {
-          margin: 0;
-          color: var(--on-variant);
-          line-height: 1.45;
-        }
-
-        .metric-card small {
-          color: #22324a;
-          font-weight: 700;
-        }
-
-        .support-grid {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 18px;
-        }
-
-        .strength-card {
-          display: flex;
-          gap: 18px;
-          padding: 22px;
-          border: 1px solid rgba(70, 72, 212, 0.14);
-        }
-
-        .heart-badge {
-          width: 44px;
-          height: 44px;
-          border-radius: 14px;
-          background: var(--primary-container);
-        }
-
-        .strength-card span {
-          padding: 6px 10px;
-          margin-bottom: 10px;
-          color: var(--on-variant);
-          background: var(--surface-container);
-        }
-
-        .strength-card h4 {
-          font-size: 18px;
-        }
-
-        .strength-card p,
-        .encouragement-card p,
-        .encouragement-card small {
-          margin: 6px 0 0;
-          color: var(--on-variant);
-          line-height: 1.5;
-        }
-
-        .encouragement-card small {
-          display: block;
-          padding-top: 8px;
-          color: #6b3f00;
-          font-weight: 700;
-        }
-
-        .encouragement-card {
+        .video-placeholder {
           display: grid;
           place-items: center;
           align-content: center;
-          gap: 10px;
-          padding: 22px;
+          gap: 18px;
+          height: 100%;
+          padding: 28px;
           text-align: center;
-          border: 1px solid rgba(0, 98, 141, 0.14);
-          background: linear-gradient(135deg, rgba(0, 124, 177, 0.14), var(--surface-container));
-        }
-
-        .encouragement-card div {
-          color: var(--tertiary);
-          font-size: 42px;
-          line-height: 1;
-        }
-
-        .encouragement-card h4 {
-          font-size: 18px;
-        }
-
-        .impact-section {
-          padding: 72px 20px;
-          background: var(--surface);
-        }
-
-        .impact-inner {
-          width: min(100%, 1120px);
-          margin: 0 auto;
-          display: grid;
-          grid-template-columns: 0.86fr 1.14fr;
-          gap: 42px;
-          align-items: start;
-        }
-
-        .section-kicker {
-          padding: 7px 13px;
-          margin-bottom: 16px;
-        }
-
-        .impact-section h2 {
-          max-width: 430px;
-          font-size: 34px;
-          line-height: 1.18;
-          font-weight: 900;
-        }
-
-        .impact-list {
-          display: grid;
-          gap: 16px;
-        }
-
-        .impact-list article {
-          display: grid;
-          grid-template-columns: auto 1fr;
-          column-gap: 18px;
-          padding: 22px;
-          border: 1px solid rgba(70, 72, 212, 0.09);
-        }
-
-        .impact-list strong {
-          grid-row: span 2;
-          color: var(--secondary);
-          font-family: "Nunito Sans", system-ui, sans-serif;
-          font-size: 22px;
-          font-weight: 900;
-        }
-
-        .impact-list h3 {
-          font-size: 19px;
-        }
-
-        .impact-list p {
-          margin: 6px 0 0;
           color: var(--on-variant);
+        }
+
+        .video-placeholder span {
+          display: grid;
+          place-items: center;
+          width: 76px;
+          height: 76px;
+          border-radius: 50%;
+          color: white;
+          background: linear-gradient(90deg, var(--primary), var(--secondary));
+          box-shadow: var(--shadow-2);
+          font-size: 28px;
+        }
+
+        .video-placeholder p {
+          max-width: 440px;
+          margin: 0;
+          font-size: 18px;
           line-height: 1.5;
+          font-weight: 700;
         }
 
         .site-footer {
@@ -1648,15 +642,8 @@ export default function Home() {
           }
         }
 
-        @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
         @media (max-width: 980px) {
           .desktop-nav,
-          .sign-in,
           .track-chip {
             display: none;
           }
@@ -1670,8 +657,7 @@ export default function Home() {
             padding: 54px 20px 70px;
           }
 
-          .hero-grid,
-          .impact-inner {
+          .hero-grid {
             grid-template-columns: 1fr;
           }
 
@@ -1692,15 +678,6 @@ export default function Home() {
 
           .tomorrow-card {
             right: 0;
-          }
-
-          .metric-grid,
-          .support-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .impact-section h2 {
-            max-width: 680px;
           }
         }
 
@@ -1737,19 +714,14 @@ export default function Home() {
             font-size: 18px;
           }
 
-          .hero-actions,
-          .input-actions,
-          .button-group,
-          .feedback-heading {
+          .hero-actions {
             flex-direction: column;
             align-items: stretch;
             width: 100%;
           }
 
           .primary-button,
-          .secondary-button,
-          .sample-button,
-          .analyze-button {
+          .secondary-button {
             width: 100%;
           }
 
@@ -1757,45 +729,13 @@ export default function Home() {
             display: none;
           }
 
-          .demo-section,
-          .impact-section {
+          .video-section {
             padding-left: 16px;
             padding-right: 16px;
           }
 
-          .input-card {
-            padding: 18px;
+          .video-frame {
             border-radius: 24px;
-          }
-
-          .sample-picker {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .sample-picker select {
-            width: 100%;
-            min-width: 0;
-          }
-
-          textarea {
-            min-height: 220px;
-            padding: 18px;
-            font-size: 17px;
-          }
-
-          .tomorrow-highlight,
-          .strength-card,
-          .impact-list article {
-            grid-template-columns: 1fr;
-          }
-
-          .tomorrow-highlight {
-            padding: 22px;
-          }
-
-          .tomorrow-highlight h4 {
-            font-size: 24px;
           }
 
           .site-footer p {
